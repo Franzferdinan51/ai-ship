@@ -194,7 +194,7 @@ async def call_tool(name: str, arguments: dict) -> list[TextContent]:
             # Try to reach gitlawb peers; gracefully return empty if not connected
             try:
                 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-                from scripts.gitlawb_bridge import AIShipBridge
+                from gitlawb_bridge import AIShipBridge
                 bridge = AIShipBridge()
                 results = bridge.discover(query=arguments.get("query", ""),
                                          limit=arguments.get("limit", 10))

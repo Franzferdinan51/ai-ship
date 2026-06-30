@@ -44,6 +44,12 @@ def item_page(slug):
         return "Not found", 404
     return render_template('item.html', item=item)
 
+# ─── Health ──────────────────────────────────────────────────────────────────
+
+@app.route('/health', methods=['GET'])
+def health():
+    return jsonify({'status': 'ok', 'service': 'ai-ship', 'version': '1.0.0'})
+
 # ─── API ─────────────────────────────────────────────────────────────────────
 
 @app.route('/api/stats')
@@ -89,8 +95,9 @@ def api_download():
         'id': item_id,
     })
 
+@app.route('/api/register', methods=['POST'])
 @app.route('/api/add', methods=['POST'])
-def api_add():
+def api_register():
     """Register a HuggingFace model or dataset in the index without downloading."""
     data     = request.json
     item_type = data.get('type')
@@ -100,6 +107,20 @@ def api_add():
         return jsonify({'error': 'Invalid'}), 400
     item_id = add_or_get(item_type, repo_id, title, f'HF:{repo_id}')
     return jsonify({'ok': True, 'id': item_id})
+
+@app.route('/api/hf/search/models', methods=['GET'])
+def api_hf_models():
+    q     = request.args.get('q', '')
+    limit = min(int(request.args.get('limit', 10)), 50)
+    results = list_hf_models(query=q, limit=limit)
+    return jsonify({'ok': True, 'results': results})
+
+@app.route('/api/hf/search/datasets', methods=['GET'])
+def api_hf_datasets():
+    q     = request.args.get('q', '')
+    limit = min(int(request.args.get('limit', 10)), 50)
+    results = list_hf_datasets(query=q, limit=limit)
+    return jsonify({'ok': True, 'results': results})
 
 if __name__ == '__main__':
     print(f"Starting AI-SHIP at http://{WEB_HOST}:{WEB_PORT}")

@@ -81,7 +81,7 @@ async function download_item() {
 
 async function register_item() {
   try {
-    await fetch('/api/add', {
+    await fetch('/api/register', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({type: item.item_type, repo_id: item.repo_id})
