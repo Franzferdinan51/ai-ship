@@ -1,14 +1,13 @@
 """
-AI-SHIP — Web UI
-Decentralized mirror for AI models and datasets.
+AI-SHIP Web UI
+Decentralized mirror for AI models and datasets — built on Gitlawb.
 Run: python app.py
 """
-import os, sys
-from flask import Flask, render_template, request, jsonify, send_file
-from db import get_all, get_by_slug, add_or_get, stats, count_items, mark_seeding, mark_downloaded
+import os
+from flask import Flask, render_template, request, jsonify
+from db import get_all, get_by_slug, add_or_get, stats, count_items, mark_downloaded
 from downloader import download_model, download_dataset, list_hf_models, list_hf_datasets
-from torrent import create_and_save
-from config import WEB_HOST, WEB_PORT, MODELS_DIR, DATASETS_DIR, TORRENTS_DIR
+from config import WEB_HOST, WEB_PORT, MODELS_DIR, DATASETS_DIR
 
 app = Flask(__name__)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
@@ -45,7 +44,7 @@ def item_page(slug):
         return "Not found", 404
     return render_template('item.html', item=item)
 
-# ─── API ──────────────────────────────────────────────────────────────────────
+# ─── API ─────────────────────────────────────────────────────────────────────
 
 @app.route('/api/stats')
 def api_stats():
@@ -60,9 +59,10 @@ def api_search():
 
 @app.route('/api/download', methods=['POST'])
 def api_download():
-    data = request.json
-    item_type = data.get('type')   # 'model' or 'dataset'
-    repo_id   = data.get('repo_id')
+    """Download a model or dataset from HuggingFace and register it in the index."""
+    data     = request.json
+    item_type = data.get('type')    # 'model' or 'dataset'
+    repo_id  = data.get('repo_id')
     if not repo_id or item_type not in ('model', 'dataset'):
         return jsonify({'error': 'Invalid request'}), 400
 
@@ -74,40 +74,32 @@ def api_download():
     if path is None:
         return jsonify({'error': result}), 500
 
-    # Create torrent for downloaded content
     dest_dir = MODELS_DIR if item_type == 'model' else DATASETS_DIR
     name = repo_id.replace('/', '_')
-    try:
-        t_path, magnet = create_and_save(path, name, output_dir=TORRENTS_DIR)
-        item_id = add_or_get(item_type, repo_id, repo_id.split('/')[-1],
-                             name, os.path.getsize(path),
-                             magnet=magnet, torrent_file=t_path)
-        mark_downloaded(item_id)
-        return jsonify({'ok': True, 'path': path, 'magnet': magnet,
-                        'torrent': t_path})
-    except Exception as e:
-        return jsonify({'ok': True, 'path': path, 'error': str(e)})
+    item_id = add_or_get(
+        item_type, repo_id,
+        title=repo_id.split('/')[-1],
+        filename=name,
+        size_bytes=os.path.getsize(path) if os.path.exists(path) else 0,
+    )
+    mark_downloaded(item_id)
+    return jsonify({
+        'ok': True,
+        'path': path,
+        'id': item_id,
+    })
 
 @app.route('/api/add', methods=['POST'])
 def api_add():
-    """Register a model/dataset without downloading — just index it."""
-    data = request.json
+    """Register a HuggingFace model or dataset in the index without downloading."""
+    data     = request.json
     item_type = data.get('type')
-    repo_id   = data.get('repo_id')
-    title     = data.get('title', repo_id)
+    repo_id  = data.get('repo_id')
+    title    = data.get('title', repo_id)
     if not item_type or not repo_id:
         return jsonify({'error': 'Invalid'}), 400
     item_id = add_or_get(item_type, repo_id, title, f'HF:{repo_id}')
     return jsonify({'ok': True, 'id': item_id})
-
-@app.route('/torrents/<slug>')
-def serve_torrent(slug):
-    item = get_by_slug(slug)
-    if not item or not item.get('torrent_file'):
-        return "Torrent not found", 404
-    return send_file(item['torrent_file'],
-                     as_attachment=True,
-                     download_name=f"{slug}.torrent")
 
 if __name__ == '__main__':
     print(f"Starting AI-SHIP at http://{WEB_HOST}:{WEB_PORT}")

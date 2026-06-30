@@ -3,69 +3,59 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{{ item_type|title }} — AI-SHIP</title>
+<title>{{ item.title[:40] }} — AI-SHIP</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
          background: #0d1117; color: #e6edf3; }
-  a { color: #58a6ff; }
-  header { background: #161b22; border-bottom: 1px solid #30363d;
-           padding: 1rem 2rem; }
+  a { color: #58a6ff; text-decoration: none; }
+  header { background: #161b22; border-bottom: 1px solid #30363d; padding: 1rem 2rem; }
   header a { color: #8b949e; font-size: 0.85rem; }
   main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
-  .item-card { background: #161b22; border: 1px solid #30363d;
-               border-radius: 8px; padding: 1.5rem; }
-  .item-card h1 { font-size: 1.4rem; margin-bottom: 0.5rem; word-break: break-all; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+          padding: 1.5rem; }
+  .card h1 { font-size: 1.4rem; word-break: break-all; margin-bottom: 0.5rem; }
   .meta { color: #8b949e; font-size: 0.85rem; margin-bottom: 1rem; }
   .meta span { margin-right: 1.5rem; }
-  .size { color: #58a6ff; font-weight: bold; }
+  .meta strong { color: #e6edf3; }
+  .badge { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
+            font-size: 0.75rem; }
+  .badge-downloaded { background: #238636; color: #fff; }
+  .badge-none { background: #30363d; color: #8b949e; }
   .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
   .btn { padding: 0.6rem 1.2rem; border-radius: 6px; border: none;
-         cursor: pointer; font-size: 0.95rem; }
+          cursor: pointer; font-size: 0.95rem; }
   .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
   .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
-  .status { display: inline-block; padding: 0.2rem 0.6rem; border-radius: 4px;
-            font-size: 0.75rem; margin-left: 0.5rem; }
-  .status.seeded { background: #238636; }
-  .status.downloaded { background: #1f6feb; }
-  .status.none { background: #30363d; }
-  pre { background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
-        padding: 1rem; overflow-x: auto; font-size: 0.8rem; margin-top: 1rem; }
-  .back { margin-bottom: 1rem; }
+  .info-box { background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+               padding: 1rem; margin-top: 1rem; font-size: 0.85rem; color: #8b949e; }
 </style>
 </head>
 <body>
 <header>
-  <a href="/">&larr; Back to AI-SHIP</a>
+  <a href="/">&larr; AI-SHIP</a>
 </header>
 <main>
-  <div class="back"><a href="/{{ item_type }}">&larr; Back to {{ item_type }}</a></div>
-  <div class="item-card">
+  <div class="card">
     <h1>{{ item.title }}</h1>
     <div class="meta">
       <span>Type: <strong>{{ item.item_type }}</strong></span>
-      <span>Repo: <strong>{{ item.repo_id }}</strong></span>
-      <span>Size: {% if item.size_bytes %}<span class="size">{{ (item.size_bytes/1e9)|round(2) }} GB</span>{% else %}—{% endif %}</span>
-      <span>Seeded: <span class="status {% if item.seeded %}seeded{% elif item.downloaded %}downloaded{% else %}none{% endif %}">
-        {% if item.seeded %}Seeding{% elif item.downloaded %}Downloaded{% else %}Not downloaded{% endif %}
-      </span></span>
+      <span>Source: <strong>{{ item.repo_id }}</strong></span>
+      <span>{% if item.size_bytes %}{{ (item.size_bytes/1e9)|round(2) }} GB{% else %}—{% endif %}</span>
+      <span class="badge {% if item.downloaded %}badge-downloaded{% else %}badge-none{% endif %}">
+        {% if item.downloaded %}Downloaded{% else %}Not yet downloaded{% endif %}
+      </span>
     </div>
 
-    {% if item.magnet %}
-    <h3 style="margin-top:1rem;font-size:0.9rem;color:#8b949e">Magnet Link</h3>
-    <pre id="magnet">{{ item.magnet }}</pre>
-    <button class="btn btn-secondary" style="margin-top:0.5rem" onclick="copy_magnet()">📋 Copy</button>
-    {% endif %}
-
-    {% if item.torrent_file %}
-    <div style="margin-top:1rem">
-      <a href="/torrents/{{ item.slug }}" class="btn btn-secondary">⬇ Download .torrent file</a>
+    <div class="info-box">
+      <strong style="color:#e6edf3">Available via Gitlawb network.</strong>
+      Download to seed this model from your node. Any gitlawb peer can then pull it.
     </div>
-    {% endif %}
 
     <div class="actions">
       <button class="btn btn-primary" onclick="download_item()">⬇ Download</button>
-      <button class="btn btn-secondary" onclick="register_item()">+ Register in index</button>
+      <button class="btn btn-secondary" onclick="register_item()">+ Register</button>
     </div>
   </div>
 </main>
@@ -84,12 +74,9 @@ async function download_item() {
       body: JSON.stringify({type: item.item_type, repo_id: item.repo_id})
     });
     const d = await r.json();
-    if (d.error) alert('Error: ' + d.error);
-    else {
-      btn.textContent = '✓ Downloaded';
-      if (d.magnet) alert('Done!\nMagnet: ' + d.magnet);
-    }
-  } catch(e) { alert('Error: ' + e); }
+    if (d.error) { alert('Error: ' + d.error); btn.textContent = '⬇ Download'; btn.disabled = false; }
+    else { btn.textContent = '✓ Downloaded'; }
+  } catch(e) { alert('Error: ' + e); btn.textContent = '⬇ Download'; btn.disabled = false; }
 }
 
 async function register_item() {
@@ -99,13 +86,8 @@ async function register_item() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({type: item.item_type, repo_id: item.repo_id})
     });
-    alert('Registered!');
+    alert('Registered on this node!');
   } catch(e) { alert('Error: ' + e); }
-}
-
-function copy_magnet() {
-  navigator.clipboard.writeText(document.getElementById('magnet').textContent.trim());
-  alert('Magnet copied!');
 }
 </script>
 </body>
