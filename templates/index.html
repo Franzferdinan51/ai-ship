@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI-SHIP — Decentralized AI Mirror</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #e6edf3; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header { background: #161b22; border-bottom: 1px solid #30363d;
+           padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
+  header h1 { font-size: 1.4rem; color: #58a6ff; }
+  header span { color: #8b949e; font-size: 0.85rem; }
+  .ship { font-size: 1.5rem; }
+  main { max-width: 900px; margin: 2rem auto; padding: 0 1rem; }
+  .search-bar { display: flex; gap: 0.5rem; margin-bottom: 2rem; }
+  .search-bar input { flex: 1; padding: 0.6rem 1rem; border-radius: 6px;
+                      border: 1px solid #30363d; background: #161b22;
+                      color: #e6edf3; font-size: 1rem; }
+  .search-bar button { padding: 0.6rem 1.5rem; border-radius: 6px;
+                       border: none; background: #238636; color: #fff;
+                       cursor: pointer; font-size: 1rem; }
+  .search-bar button:hover { background: #2ea043; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem; margin-bottom: 2rem; }
+  .stat { background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+          padding: 1rem; text-align: center; }
+  .stat .val { font-size: 2rem; font-weight: bold; color: #58a6ff; }
+  .stat .label { color: #8b949e; font-size: 0.8rem; margin-top: 0.3rem; }
+  .section { margin-bottom: 2rem; }
+  .section h2 { border-bottom: 1px solid #30363d; padding-bottom: 0.5rem;
+                margin-bottom: 1rem; color: #e6edf3; }
+  .item-grid { display: grid; gap: 0.75rem; }
+  .item { background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+          padding: 0.85rem 1rem; display: flex; justify-content: space-between;
+          align-items: center; }
+  .item:hover { border-color: #58a6ff; }
+  .item-name { font-weight: 600; font-size: 0.95rem; }
+  .item-meta { color: #8b949e; font-size: 0.75rem; margin-top: 0.2rem; }
+  .item-tags { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.3rem; }
+  .tag { background: #21262d; border: 1px solid #30363d; border-radius: 4px;
+         padding: 0.1rem 0.4rem; font-size: 0.7rem; color: #8b949e; }
+  .item-right { text-align: right; flex-shrink: 0; margin-left: 1rem; }
+  .btn { padding: 0.4rem 0.9rem; border-radius: 6px; border: none;
+         cursor: pointer; font-size: 0.85rem; }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+  .results { display: none; }
+  .results.visible { display: block; }
+  .result-item { background: #161b22; border: 1px solid #30363d; border-radius: 6px;
+                 padding: 0.75rem 1rem; margin-bottom: 0.5rem; }
+  .result-item:hover { border-color: #58a6ff; }
+  .loading { color: #8b949e; text-align: center; padding: 2rem; }
+  footer { text-align: center; color: #484f58; font-size: 0.75rem;
+           margin-top: 3rem; padding: 1rem; border-top: 1px solid #21262d; }
+  @media (max-width: 600px) {
+    .stats { grid-template-columns: 1fr 1fr; }
+    header { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <span class="ship">🚀</span>
+  <div>
+    <h1>AI-SHIP</h1>
+    <span>Decentralized mirror for AI models & datasets</span>
+  </div>
+</header>
+
+<main>
+  <div class="search-bar">
+    <input type="text" id="q" placeholder="Search HuggingFace models & datasets…">
+    <button onclick="do_search()">Search</button>
+  </div>
+
+  <div id="results" class="results">
+    <div class="section">
+      <h2>Models</h2>
+      <div id="results-models"></div>
+    </div>
+    <div class="section">
+      <h2>Datasets</h2>
+      <div id="results-datasets"></div>
+    </div>
+  </div>
+
+  <div id="loading" class="loading" style="display:none">Searching…</div>
+
+  <div class="stats">
+    <div class="stat">
+      <div class="val" id="s-models">—</div>
+      <div class="label">Models</div>
+    </div>
+    <div class="stat">
+      <div class="val" id="s-datasets">—</div>
+      <div class="label">Datasets</div>
+    </div>
+    <div class="stat">
+      <div class="val" id="s-seeded">—</div>
+      <div class="label">Seeding</div>
+    </div>
+    <div class="stat">
+      <div class="val" id="s-size">—</div>
+      <div class="label">Mirrored (GB)</div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Browse Models</h2>
+    <div class="item-grid" id="models-list">
+      <div style="color:#8b949e;padding:1rem">Loading…</div>
+    </div>
+    <div style="margin-top:0.5rem"><a href="/models">View all →</a></div>
+  </div>
+
+  <div class="section">
+    <h2>Browse Datasets</h2>
+    <div class="item-grid" id="datasets-list">
+      <div style="color:#8b949e;padding:1rem">Loading…</div>
+    </div>
+    <div style="margin-top:0.5rem"><a href="/datasets">View all →</a></div>
+  </div>
+</main>
+
+<footer>
+  AI-SHIP — Built for open access to AI. No single server. No single point of failure.
+</footer>
+
+<script>
+async function load_stats() {
+  try {
+    const r = await fetch('/api/stats');
+    const s = await r.json();
+    document.getElementById('s-models').textContent = s.models || 0;
+    document.getElementById('s-datasets').textContent = s.datasets || 0;
+    document.getElementById('s-seeded').textContent = s.seeded || 0;
+    const gb = (s.total_size_bytes / 1e9).toFixed(1);
+    document.getElementById('s-size').textContent = gb;
+  } catch(e) { console.error(e); }
+}
+
+async function load_items(type, el) {
+  try {
+    const r = await fetch('/' + type + '?q=');
+    const html = await r.text();
+    // Simple: extract item rows from response
+    el.innerHTML = '<a href="/' + type + '">View all ' + type + ' →</a>';
+  } catch(e) { el.innerHTML = 'Error loading'; }
+}
+
+async function do_search() {
+  const q = document.getElementById('q').value.trim();
+  if (!q) return;
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('results').classList.remove('visible');
+  try {
+    const r = await fetch('/api/search?q=' + encodeURIComponent(q));
+    const d = await r.json();
+    render_results(d.models, 'results-models', 'model');
+    render_results(d.datasets, 'results-datasets', 'dataset');
+    document.getElementById('results').classList.add('visible');
+  } catch(e) { console.error(e); }
+  document.getElementById('loading').style.display = 'none';
+}
+
+function render_results(items, el_id, type) {
+  const el = document.getElementById(el_id);
+  if (!items || items.length === 0) {
+    el.innerHTML = '<div style="color:#8b949e;padding:0.5rem">No results</div>';
+    return;
+  }
+  el.innerHTML = items.map(item => `
+    <div class="result-item">
+      <div class="item-name">${item.id}</div>
+      <div class="item-meta">${(item.downloads||0).toLocaleString()} downloads · ${item.tags ? item.tags.slice(0,4).map(t=>`<span class="tag">${t}</span>`).join('') : ''}</div>
+      <div style="margin-top:0.5rem;display:flex;gap:0.5rem">
+        <button class="btn btn-primary" onclick="download('${type}','${item.id}')">⬇ Download</button>
+        <button class="btn btn-secondary" onclick="register('${type}','${item.id}')">+ Register only</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function download(type, repo_id) {
+  if (!confirm('Download ' + repo_id + '?\n\nThis will download the full model/dataset from HuggingFace.')) return;
+  const btn = event.target;
+  btn.textContent = 'Downloading…';
+  btn.disabled = true;
+  try {
+    const r = await fetch('/api/download', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({type, repo_id})
+    });
+    const d = await r.json();
+    if (d.error) {
+      alert('Error: ' + d.error);
+      btn.textContent = '⬇ Download';
+      btn.disabled = false;
+    } else {
+      btn.textContent = '✓ Downloaded';
+      btn.style.background = '#238636';
+      if (d.magnet) {
+        const magnet = prompt('Download complete!\n\nMagnet link:', d.magnet);
+      }
+      if (d.torrent) {
+        window.open('/torrents/' + repo_id.replace('/','_'), '_blank');
+      }
+    }
+  } catch(e) {
+    alert('Error: ' + e);
+    btn.textContent = '⬇ Download';
+    btn.disabled = false;
+  }
+}
+
+async function register(type, repo_id) {
+  try {
+    await fetch('/api/add', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({type, repo_id})
+    });
+    const btn = event.target;
+    btn.textContent = '✓ Registered';
+    btn.disabled = true;
+  } catch(e) { alert('Error: ' + e); }
+}
+
+document.getElementById('q').addEventListener('keydown', e => {
+  if (e.key === 'Enter') do_search();
+});
+
+load_stats();
+load_items('models', document.getElementById('models-list'));
+load_items('datasets', document.getElementById('datasets-list'));
+</script>
+</body>
+</html>
