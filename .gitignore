@@ -1,15 +1,32 @@
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.egg-info/
-db/*.db
+*.py[cod]
+*.so
+.Python
+.venv/
+venv/
+ENV/
+
+# Data
+db/index.db
 db/*.db-journal
-torrents/*.torrent
-torrents/*.torrent.*
 models/
 datasets/
-venv/
-.vscode/
-.DS_Store
-*.log
+torrents/
+
+# Environment
 .env
+.env.local
+HF_TOKEN=
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+
+# Docker
+.dockerignore

@@ -1,0 +1,16 @@
+services:
+  ai-ship:
+    build: .
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./models:/data/models
+      - ./datasets:/data/datasets
+      - ./db:/app/db
+    environment:
+      - HF_TOKEN=${HF_TOKEN:-}
+      - GITLAWB_NODE_URL=${GITLAWB_NODE_URL:-http://localhost:7545}
+      - GITLAWB_DID=${GITLAWB_DID:-}
+      - WEB_HOST=0.0.0.0
+      - WEB_PORT=5000
+    restart: unless-stopped
