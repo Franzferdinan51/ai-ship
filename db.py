@@ -1,33 +1,26 @@
 """
 AI-SHIP — Database
-SQLite index of all models and datasets available via torrent.
+SQLite index of all mirrored models and datasets.
 """
-import sqlite3, json, hashlib
+import sqlite3, json
 from config import DB_PATH
 
-def _row_to_dict(row):
-    if row is None:
-        return None
-    return dict(row)
-
 def init():
+    """Create tables if they don't exist."""
     with sqlite3.connect(DB_PATH) as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS items (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                item_type TEXT NOT NULL,   -- 'model' or 'dataset'
-                repo_id  TEXT NOT NULL,    -- e.g. 'meta-llama/Llama-3-8B'
+                item_type TEXT NOT NULL,
+                repo_id  TEXT NOT NULL,
                 slug     TEXT UNIQUE NOT NULL,
                 title    TEXT NOT NULL,
-                filename TEXT NOT NULL,     -- local filename or 'HF:<repo_id>'
+                filename TEXT NOT NULL,
                 size_bytes INTEGER DEFAULT 0,
-                sha256   TEXT,              -- checksum if available
-                magnet   TEXT,              -- full magnet URI
-                torrent_file TEXT,          -- path to .torrent file
-                seeded   INTEGER DEFAULT 0, -- 1 = currently seeding
+                sha256   TEXT,
                 downloaded INTEGER DEFAULT 0,
-                tags     TEXT DEFAULT '',   -- JSON list
-                meta     TEXT DEFAULT '{}', -- JSON dict, extra HF fields
+                tags     TEXT DEFAULT '[]',
+                meta     TEXT DEFAULT '{}',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
@@ -46,28 +39,28 @@ def init():
         conn.execute("CREATE INDEX IF NOT EXISTS idx_repo ON items(repo_id)")
 
 def add_or_get(item_type, repo_id, title, filename, size_bytes=0,
-                sha256=None, magnet=None, torrent_file=None, tags=None, meta=None):
+               sha256=None, tags=None, meta=None):
+    """Insert a new item or return existing id. No magnet/torrent fields."""
     slug = repo_id.replace('/', '_')
-    tags  = json.dumps(tags  or [])
-    meta  = json.dumps(meta  or {})
+    tags = json.dumps(tags or [])
+    meta = json.dumps(meta or {})
     with sqlite3.connect(DB_PATH) as conn:
         try:
             cur = conn.execute("""
                 INSERT INTO items
                     (item_type, repo_id, slug, title, filename,
-                     size_bytes, sha256, magnet, torrent_file, tags, meta)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                     size_bytes, sha256, tags, meta)
+                VALUES (?,?,?,?,?,?,?,?,?)
             """, (item_type, repo_id, slug, title, filename,
-                  size_bytes, sha256, magnet, torrent_file, tags, meta))
+                  size_bytes, sha256, tags, meta))
             return cur.lastrowid
         except sqlite3.IntegrityError:
             cur = conn.execute("SELECT id FROM items WHERE slug=?", (slug,))
-            row = cur.fetchone()
-            return row[0]
+            return cur.fetchone()[0]
 
 def mark_seeding(item_id):
     with sqlite3.connect(DB_PATH) as conn:
-        conn.execute("UPDATE items SET seeded=1 WHERE id=?", (item_id,))
+        conn.execute("UPDATE items SET downloaded=1 WHERE id=?", (item_id,))
 
 def mark_downloaded(item_id):
     with sqlite3.connect(DB_PATH) as conn:
@@ -106,12 +99,11 @@ def count_items(item_type=None):
 
 def stats():
     with sqlite3.connect(DB_PATH) as conn:
-        models = conn.execute("SELECT COUNT(*) FROM items WHERE item_type='model'").fetchone()[0]
-        datasets = conn.execute("SELECT COUNT(*) FROM items WHERE item_type='dataset'").fetchone()[0]
-        seeded = conn.execute("SELECT COUNT(*) FROM items WHERE seeded=1").fetchone()[0]
+        models     = conn.execute("SELECT COUNT(*) FROM items WHERE item_type='model'").fetchone()[0]
+        datasets   = conn.execute("SELECT COUNT(*) FROM items WHERE item_type='dataset'").fetchone()[0]
         downloaded = conn.execute("SELECT COUNT(*) FROM items WHERE downloaded=1").fetchone()[0]
         total_size = conn.execute("SELECT SUM(size_bytes) FROM items").fetchone()[0] or 0
-        return dict(models=models, datasets=datasets, seeded=seeded,
+        return dict(models=models, datasets=datasets,
                     downloaded=downloaded, total_size_bytes=total_size)
 
 # Init on import

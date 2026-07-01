@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ item.title[:50] }} — AI-SHIP</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #0d1117; color: #e6edf3; line-height: 1.6; }
+  a { color: #58a6ff; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  header { background: #161b22; border-bottom: 1px solid #30363d;
+           padding: 1rem 2rem; display: flex; justify-content: space-between; align-items: center; }
+  .header-logo { font-size: 1.1rem; font-weight: 600; color: #e6edf3; }
+  .header-links { display: flex; gap: 1.5rem; }
+  .header-links a { color: #8b949e; font-size: 0.85rem; }
+  .header-links a:hover { color: #e6edf3; }
+  main { max-width: 860px; margin: 2.5rem auto; padding: 0 1.5rem; }
+  .breadcrumb { font-size: 0.8rem; color: #8b949e; margin-bottom: 1rem; }
+  .breadcrumb a { color: #58a6ff; }
+  .page-title { font-size: 1.7rem; word-break: break-all; margin-bottom: 0.3rem; }
+  .repo-id { color: #8b949e; font-size: 0.85rem; margin-bottom: 1.5rem; }
+  .badges { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .badge { display: inline-block; padding: 0.25rem 0.7rem; border-radius: 20px;
+            font-size: 0.75rem; font-weight: 500; }
+  .badge-type { background: #1f6feb22; color: #58a6ff; border: 1px solid #1f6feb44; }
+  .badge-ok { background: #23863622; color: #3fb950; border: 1px solid #23863644; }
+  .badge-pending { background: #30363d22; color: #8b949e; border: 1px solid #30363d44; }
+  .section { background: #161b22; border: 1px solid #30363d; border-radius: 8px;
+             padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .section-title { font-size: 0.75rem; font-weight: 600; text-transform: uppercase;
+                   letter-spacing: 0.05em; color: #8b949e; margin-bottom: 0.75rem; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem 2rem; }
+  .info-row { display: flex; gap: 0.5rem; }
+  .info-label { color: #8b949e; font-size: 0.85rem; min-width: 100px; }
+  .info-value { color: #e6edf3; font-size: 0.85rem; }
+  .hf-link { display: inline-flex; align-items: center; gap: 0.4rem;
+             background: #ffc10711; border: 1px solid #ffc10744; color: #ffc107;
+             padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; font-weight: 500; }
+  .hf-link:hover { background: #ffc10722; text-decoration: none; }
+  .actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1.5rem; }
+  .btn { padding: 0.65rem 1.3rem; border-radius: 6px; border: none;
+          cursor: pointer; font-size: 0.95rem; font-weight: 500; }
+  .btn-primary { background: #238636; color: #fff; }
+  .btn-primary:hover { background: #2ea043; }
+  .btn-primary:disabled { background: #23863666; cursor: not-allowed; }
+  .btn-secondary { background: #21262d; color: #e6edf3; border: 1px solid #30363d; }
+  .btn-secondary:hover { background: #30363d; }
+  .msg { padding: 0.6rem 1rem; border-radius: 6px; margin-top: 0.75rem;
+          font-size: 0.85rem; display: none; }
+  .msg.ok { background: #23863622; border: 1px solid #23863644; color: #3fb950; display: block; }
+  .msg.err { background: #f8514922; border: 1px solid #f8514944; color: #f85149; display: block; }
+  .accreditation { margin-top: 0.5rem; font-size: 0.75rem; color: #6e7681;
+                    border-top: 1px solid #30363d; padding-top: 0.75rem; }
+</style>
+</head>
+<body>
+<header>
+  <span class="header-logo">AI-SHIP</span>
+  <div class="header-links">
+    <a href="/">Home</a>
+    <a href="/models">Models</a>
+    <a href="/datasets">Datasets</a>
+  </div>
+</header>
+<main>
+  <div class="breadcrumb">
+    <a href="/">AI-SHIP</a> &rsaquo; <a href="/models">Models</a> &rsaquo; {{ item.title }}
+  </div>
+  <h1 class="page-title">{{ item.title }}</h1>
+  <div class="repo-id">{{ item.repo_id }}</div>
+  <div class="badges">
+    <span class="badge badge-type">{{ item.item_type }}</span>
+    {% if item.downloaded %}
+    <span class="badge badge-ok">Downloaded</span>
+    {% else %}
+    <span class="badge badge-pending">Not Downloaded</span>
+    {% endif %}
+    {% if item.size_bytes %}
+    <span class="badge badge-pending">{{ "%.1f"|format(item.size_bytes/1e9) }} GB</span>
+    {% endif %}
+  </div>
+  <div class="section">
+    <div class="section-title">Source</div>
+    <a href="https://huggingface.co/{{ item.repo_id }}" target="_blank" class="hf-link">
+       &#9679; View on HuggingFace &mdash; {{ item.repo_id }}
+    </a>
+  </div>
+  <div class="section">
+    <div class="section-title">Details</div>
+    <div class="info-grid">
+      <div class="info-row"><span class="info-label">Type</span><span class="info-value">{{ item.item_type }}</span></div>
+      <div class="info-row"><span class="info-label">Size</span><span class="info-value">{% if item.size_bytes %}{{ "%.1f"|format(item.size_bytes/1e9) }} GB{% else %}—{% endif %}</span></div>
+      <div class="info-row"><span class="info-label">Status</span><span class="info-value">{% if item.downloaded %}Downloaded{% else %}Not yet downloaded{% endif %}</span></div>
+      <div class="info-row"><span class="info-label">Added</span><span class="info-value">{{ item.created_at[:10] if item.created_at else "—" }}</span></div>
+      <div class="info-row"><span class="info-label">Slug</span><span class="info-value" style="word-break:break-all;font-size:0.75rem;">{{ item.slug }}</span></div>
+      <div class="info-row"><span class="info-label">Chain</span><span class="info-value">HF Hub &rarr; AI-SHIP &rarr; Gitlawb</span></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Actions</div>
+    <div class="actions">
+      <button class="btn btn-primary" id="dl-btn" onclick="download_item()">&#8595; Download</button>
+      <button class="btn btn-secondary" onclick="register_item()">+ Register</button>
+    </div>
+    <div id="msg" class="msg"></div>
+  </div>
+  <div class="accreditation">
+    Accredited via HuggingFace Hub &rarr; AI-SHIP mirror &rarr; Gitlawb decentralized network.
+    Original model weights and metadata belong to the authors on HuggingFace.
+  </div>
+</main>
+<script>
+const item = {{ item|tojson }};
+function show(msg, type) {
+  const el = document.getElementById("msg");
+  el.textContent = msg;
+  el.className = "msg " + type;
+}
+async function download_item() {
+  if (!confirm("Download " + item.repo_id + " from HuggingFace?")) return;
+  const btn = document.getElementById("dl-btn");
+  btn.disabled = true; btn.textContent = "Downloading…";
+  try {
+    const r = await fetch("/api/download", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({type: item.item_type, repo_id: item.repo_id})
+    });
+    const d = await r.json();
+    if (d.error) { show("Error: " + d.error, "err"); btn.textContent = "Download"; btn.disabled = false; }
+    else { show("Downloaded to: " + (d.path || "local storage"), "ok"); btn.textContent = "✓ Downloaded"; }
+  } catch(e) { show("Error: " + e, "err"); btn.textContent = "Download"; btn.disabled = false; }
+}
+async function register_item() {
+  try {
+    await fetch("/api/register", {method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({type: item.item_type, repo_id: item.repo_id})});
+    show("Registered on this node!", "ok");
+  } catch(e) { show("Error: " + e, "err"); }
+}
+</script>
+</body>
+</html>

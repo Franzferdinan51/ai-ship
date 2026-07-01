@@ -42,7 +42,7 @@ def item_page(slug):
     item = get_by_slug(slug)
     if not item:
         return "Not found", 404
-    return render_template('item.html', item=item)
+    return render_template('model_detail.html', item=item)
 
 # ─── Health ──────────────────────────────────────────────────────────────────
 
@@ -56,12 +56,51 @@ def health():
 def api_stats():
     return jsonify(stats())
 
-@app.route('/api/search')
+@app.route('/api/models')
+def api_models():
+    """List all mirrored models."""
+    models = get_all(item_type='model', limit=100)
+    return jsonify({'items': models, 'total': len(models)})
+
+@app.route('/api/datasets')
+def api_datasets():
+    """List all mirrored datasets."""
+    datasets = get_all(item_type='dataset', limit=100)
+    return jsonify({'items': datasets, 'total': len(datasets)})
+
+@app.route('/api/search', methods=['GET'])
 def api_search():
-    q = request.args.get('q', '')
-    models   = list_hf_models(query=q, limit=10)
-    datasets = list_hf_datasets(query=q, limit=10)
-    return jsonify({'models': models, 'datasets': datasets})
+    """Full-text search over mirrored models and datasets."""
+    q     = request.args.get('q', '')
+    limit = min(int(request.args.get('limit', 20)), 100)
+    page  = max(int(request.args.get('p', 0)), 0)
+    itype = request.args.get('type', None)  # 'model', 'dataset', or None for all
+    offset = page * limit
+
+    # Try FTS first, fall back to LIKE
+    try:
+        from scripts.full_text_search import search_fts
+        results = search_fts(q, item_type=itype, limit=limit)
+    except Exception:
+        # Fallback to LIKE search
+        results = get_all(item_type=itype, search=q, limit=limit, offset=offset)
+
+    return jsonify({
+        'ok': True,
+        'query': q,
+        'item_type': itype,
+        'items': results,
+        'limit': limit,
+        'page': page,
+    })
+
+@app.route('/api/search/models', methods=['GET'])
+def api_search_models():
+    return api_search()
+
+@app.route('/api/search/datasets', methods=['GET'])
+def api_search_datasets():
+    return api_search()
 
 @app.route('/api/download', methods=['POST'])
 def api_download():
